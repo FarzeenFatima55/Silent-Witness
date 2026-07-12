@@ -9,28 +9,29 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Silent Witness — Report Safely. Be Heard. Stay Anonymous.",
+  title: "Silent Witness — Document Cyber Harassment & File with NCCIA",
   description:
-    "Silent Witness lets you report incidents privately and securely. No login required, end-to-end encrypted, zero metadata collected. Your voice matters — your identity stays protected.",
+    "Silent Witness helps cyber harassment victims in Pakistan document evidence and prepare a PECA 2016-aligned complaint draft ready to file with NCCIA. No account required.",
   keywords: [
-    "anonymous reporting",
-    "whistleblower platform",
-    "secure reporting",
-    "privacy first",
-    "incident reporting",
+    "cyber harassment Pakistan",
+    "PECA 2016 complaint",
+    "NCCIA filing",
+    "cyberstalking evidence",
+    "online harassment report Pakistan",
+    "anonymous evidence documentation",
   ],
   openGraph: {
-    title: "Silent Witness — Report Safely. Be Heard. Stay Anonymous.",
+    title: "Silent Witness — Document Cyber Harassment & File with NCCIA",
     description:
-      "Report incidents privately and securely. No login required, end-to-end encrypted. Your identity stays protected.",
+      "Collect evidence, get an AI-drafted PECA 2016 complaint, and export a PDF for NCCIA. No login. No account. Your evidence stays private.",
     type: "website",
-    locale: "en_US",
+    locale: "en_PK",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Silent Witness — Report Safely. Be Heard.",
+    title: "Silent Witness — Cyber Harassment Evidence & PECA 2016 Complaints",
     description:
-      "Anonymous, encrypted incident reporting. No login required. Your voice matters — your identity stays protected.",
+      "Pakistan's privacy-first tool for documenting cyber harassment and drafting NCCIA complaints under PECA 2016. No account required.",
   },
   robots: {
     index: true,
