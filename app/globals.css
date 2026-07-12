@@ -1,26 +1,218 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* ─── Brand Design Tokens ───────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Colors */
+  --color-navy: #1B2A4A;
+  --color-slate: #5B6E8C;
+  --color-cream: #F7F5F1;
+  --color-sage: #8FA98B;
+  --color-gold: #C9A66B;
+
+  /* Palette shades */
+  --color-navy-50: #EEF1F7;
+  --color-navy-100: #D3DAEA;
+  --color-navy-200: #A6B4D4;
+  --color-navy-300: #7A8FBF;
+  --color-navy-400: #4D69A9;
+  --color-navy-500: #1B2A4A;
+  --color-navy-600: #162238;
+  --color-navy-700: #101926;
+  --color-navy-800: #0B1119;
+  --color-navy-900: #05080D;
+
+  --color-slate-50: #F0F2F5;
+  --color-slate-100: #D8DDE6;
+  --color-slate-200: #B1BCCC;
+  --color-slate-300: #8A9AB3;
+  --color-slate-400: #637899;
+  --color-slate-500: #5B6E8C;
+  --color-slate-600: #495870;
+  --color-slate-700: #364254;
+  --color-slate-800: #242C38;
+  --color-slate-900: #12161C;
+
+  --color-sage-50: #F2F6F1;
+  --color-sage-100: #D9E6D8;
+  --color-sage-200: #B3CDB1;
+  --color-sage-300: #8CB48A;
+  --color-sage-400: #8FA98B;
+  --color-sage-500: #6E8C6A;
+  --color-sage-600: #566E52;
+  --color-sage-700: #3F513C;
+  --color-sage-800: #283528;
+  --color-sage-900: #141A14;
+
+  --color-gold-50: #FBF5EB;
+  --color-gold-100: #F3E4C7;
+  --color-gold-200: #E7C98E;
+  --color-gold-300: #DBAE56;
+  --color-gold-400: #C9A66B;
+  --color-gold-500: #B8903A;
+  --color-gold-600: #93732E;
+  --color-gold-700: #6E5623;
+  --color-gold-800: #493917;
+  --color-gold-900: #241D0C;
+
+  --color-cream: #F7F5F1;
+  --color-cream-dark: #EDEAE4;
+
+  /* Typography */
+  --font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* Spacing extras */
+  --spacing-18: 4.5rem;
+  --spacing-22: 5.5rem;
+  --spacing-26: 6.5rem;
+  --spacing-30: 7.5rem;
+
+  /* Border radius */
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+
+  /* Shadows */
+  --shadow-glow-sage: 0 0 40px 0 rgb(143 169 139 / 0.25);
+  --shadow-glow-navy: 0 0 60px 0 rgb(27 42 74 / 0.15);
+  --shadow-card: 0 1px 3px 0 rgb(27 42 74 / 0.06), 0 4px 16px 0 rgb(27 42 74 / 0.08);
+  --shadow-card-hover: 0 4px 12px 0 rgb(27 42 74 / 0.08), 0 16px 48px 0 rgb(27 42 74 / 0.12);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ─── Keyframes ─────────────────────────────────────────────────────────── */
+@keyframes gradient-shift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
   }
 }
 
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+
+  70% {
+    transform: scale(1.08);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1.08);
+    opacity: 0;
+  }
+}
+
+/* ─── Animation Utilities ───────────────────────────────────────────────── */
+@utility animate-gradient {
+  animation: gradient-shift 8s ease infinite;
+  background-size: 200% 200%;
+}
+
+@utility animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@utility animate-fade-up {
+  animation: fade-up 0.6s ease forwards;
+}
+
+@utility animate-fade-in {
+  animation: fade-in 0.5s ease forwards;
+}
+
+@utility animate-pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ─── Base Styles ───────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-cream);
+  color: var(--color-navy);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ─── Selection ─────────────────────────────────────────────────────────── */
+::selection {
+  background-color: rgb(143 169 139 / 0.3);
+  color: var(--color-navy);
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate-200);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-300);
+}
+
+/* ─── Focus Ring ────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-sage);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
