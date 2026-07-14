@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Shield, Lock, Eye, ArrowRight, CheckCircle } from "lucide-react";
 import Button from "@/app/components/ui/Button";
@@ -21,6 +22,7 @@ const fadeUpVariants = {
 };
 
 export default function Hero() {
+  const router = useRouter();
   return (
     <section
       id="hero"
@@ -147,13 +149,13 @@ export default function Hero() {
           variants={fadeUpVariants}
           className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14"
         >
-          <Button size="lg" variant="primary">
+          <Button size="lg" variant="primary" onClick={() => router.push("/create-case")}>
             <Shield className="w-4 h-4" />
             Start My Case
             <ArrowRight className="w-4 h-4 ml-1" />
           </Button>
-          <Button size="lg" variant="outline">
-            See How It Works
+          <Button size="lg" variant="outline" onClick={() => router.push("/access-case")}>
+            Access Existing Case
           </Button>
         </motion.div>
 

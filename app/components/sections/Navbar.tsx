@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Shield } from "lucide-react";
 import Button from "@/app/components/ui/Button";
@@ -13,6 +14,7 @@ const navLinks = [
 ];
 
 export default function Navbar() {
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -73,7 +75,10 @@ export default function Navbar() {
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
               <span className="text-xs text-slate/70 font-medium">No login required</span>
-              <Button size="md" variant="primary">
+              <Button size="md" variant="ghost" onClick={() => router.push("/access-case")}>
+                Access Case
+              </Button>
+              <Button size="md" variant="primary" onClick={() => router.push("/create-case")}>
                 <Shield className="w-3.5 h-3.5" />
                 Make a Report
               </Button>
@@ -112,8 +117,11 @@ export default function Navbar() {
                   {link.label}
                 </button>
               ))}
-              <div className="mt-2 pt-2 border-t border-navy/8">
-                <Button size="md" variant="primary" className="w-full">
+              <div className="mt-2 pt-2 border-t border-navy/8 flex flex-col gap-2">
+                <Button size="md" variant="ghost" className="w-full" onClick={() => { setIsMobileOpen(false); router.push("/access-case"); }}>
+                  Access Case
+                </Button>
+                <Button size="md" variant="primary" className="w-full" onClick={() => { setIsMobileOpen(false); router.push("/create-case"); }}>
                   <Shield className="w-3.5 h-3.5" />
                   Make a Report
                 </Button>
