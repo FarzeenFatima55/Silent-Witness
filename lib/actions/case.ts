@@ -47,6 +47,20 @@ export async function createCase(pin?: string) {
         return { error: 'Could not create case. Please try again.' }
     }
 
+    // 4. Issue session cookie so the user is auto-logged into this case
+    const token = jwt.sign({ case_id: caseRow.case_id }, JWT_SECRET, {
+        expiresIn: '2h',
+    })
+
+    const cookieStore = await cookies()
+    cookieStore.set('sw_session', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 60 * 60 * 2, // 2 hours
+        path: '/',
+    })
+
     return { case_code: caseRow.case_code, case_id: caseRow.case_id }
 }
 

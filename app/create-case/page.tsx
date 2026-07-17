@@ -1,18 +1,20 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Copy, Check, AlertTriangle, Loader2 } from "lucide-react";
+import { Shield, Copy, Check, AlertTriangle, Loader2, ArrowRight } from "lucide-react";
 import Button from "@/app/components/ui/Button";
 import { createCase } from "@/lib/actions/case";
 
 type State =
   | { phase: "form" }
   | { phase: "loading" }
-  | { phase: "success"; caseCode: string }
+  | { phase: "success"; caseCode: string; caseId: string }
   | { phase: "error"; message: string };
 
 export default function CreateCasePage() {
+  const router = useRouter();
   const [pin, setPin] = useState("");
   const [state, setState] = useState<State>({ phase: "form" });
   const [copied, setCopied] = useState(false);
@@ -30,8 +32,8 @@ export default function CreateCasePage() {
 
     if ("error" in result && result.error) {
       setState({ phase: "error", message: result.error });
-    } else if ("case_code" in result && result.case_code) {
-      setState({ phase: "success", caseCode: result.case_code });
+    } else if ("case_code" in result && result.case_code && "case_id" in result && result.case_id) {
+      setState({ phase: "success", caseCode: result.case_code, caseId: result.case_id });
     } else {
       setState({ phase: "error", message: "An unexpected error occurred. Please try again." });
     }
@@ -205,7 +207,7 @@ export default function CreateCasePage() {
                   type="button"
                   variant="outline"
                   size="md"
-                  className="w-full mb-5"
+                  className="w-full mb-3"
                   onClick={handleCopy}
                 >
                   {copied ? (
@@ -219,6 +221,18 @@ export default function CreateCasePage() {
                       Copy Code
                     </>
                   )}
+                </Button>
+
+                {/* Go to Dashboard */}
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  className="w-full mb-5"
+                  onClick={() => router.push(`/case/${state.phase === "success" ? state.caseId : ""}`)}
+                >
+                  Go to Dashboard
+                  <ArrowRight className="w-4 h-4" />
                 </Button>
 
                 {/* Warning */}
