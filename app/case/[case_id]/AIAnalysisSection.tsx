@@ -1,5 +1,6 @@
 "use client";
 
+import { getCaseCode } from "@/lib/actions/case";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9,9 +10,12 @@ import {
     ShieldAlert,
     ListChecks,
     FileText,
+    Download,
 } from "lucide-react";
 import Button from "@/app/components/ui/Button";
 import { analyzeCase, getLatestAnalysis } from "@/lib/actions/analysis";
+import { generateComplaintPdf } from "@/lib/pdf/generateComplaintPdf";
+import { getEvidenceSignedUrl } from "@/lib/actions/evidence";
 
 type KeyPoint = { type: string; note: string };
 
@@ -23,20 +27,30 @@ type Analysis = {
     draft_complaint_text: string | null;
 };
 
+type EvidenceItem = {
+    evidence_id: string;
+    file_name: string;
+    platform: string;
+    evidence_type: string;
+    captured_at: string | null;
+    message_text: string | null;
+    created_at: string;
+};
 type Phase = "idle" | "loading-existing" | "analyzing" | "error";
 
 export default function AIAnalysisSection({
     caseId,
     evidenceCount,
+    evidence,
 }: {
     caseId: string;
     evidenceCount: number;
+    evidence: EvidenceItem[];
 }) {
     const [analysis, setAnalysis] = useState<Analysis | null>(null);
     const [phase, setPhase] = useState<Phase>("loading-existing");
     const [errorMsg, setErrorMsg] = useState("");
 
-    // Check for an existing analysis on mount
     useEffect(() => {
         getLatestAnalysis(caseId).then((res) => {
             if ("success" in res && res.analysis) {
@@ -59,6 +73,20 @@ export default function AIAnalysisSection({
         }
     };
 
+    const handleExportPdf = async () => {
+        if (!analysis) return;
+        const codeResult = await getCaseCode(caseId);
+        const displayCode = "case_code" in codeResult ? codeResult.case_code : caseId;
+        await generateComplaintPdf(
+            displayCode,
+            {
+                category_suggestion: analysis.category_suggestion,
+                draft_complaint_text: analysis.draft_complaint_text,
+            },
+            evidence,
+            (evidenceId: string) => getEvidenceSignedUrl(caseId, evidenceId)
+        );
+    };
     const keyPoints: KeyPoint[] = Array.isArray(analysis?.key_evidence_points)
         ? (analysis!.key_evidence_points as KeyPoint[])
         : [];
@@ -82,7 +110,6 @@ export default function AIAnalysisSection({
 
             <div className="bg-white/70 backdrop-blur-sm border border-navy/8 rounded-2xl shadow-[0_2px_16px_rgb(27_42_74/0.05)] overflow-hidden">
                 <AnimatePresence mode="wait">
-                    {/* No evidence yet */}
                     {evidenceCount === 0 && (
                         <motion.div
                             key="no-evidence"
@@ -99,7 +126,6 @@ export default function AIAnalysisSection({
                         </motion.div>
                     )}
 
-                    {/* Has evidence, no analysis yet, not analyzing */}
                     {evidenceCount > 0 && !analysis && phase !== "analyzing" && (
                         <motion.div
                             key="analyze-cta"
@@ -133,7 +159,6 @@ export default function AIAnalysisSection({
                         </motion.div>
                     )}
 
-                    {/* Analyzing */}
                     {phase === "analyzing" && (
                         <motion.div
                             key="analyzing"
@@ -148,7 +173,6 @@ export default function AIAnalysisSection({
                         </motion.div>
                     )}
 
-                    {/* Results */}
                     {analysis && phase !== "analyzing" && (
                         <motion.div
                             key="results"
@@ -156,7 +180,6 @@ export default function AIAnalysisSection({
                             animate={{ opacity: 1 }}
                             className="p-6"
                         >
-                            {/* Category */}
                             <div className="mb-5">
                                 <p className="text-xs font-semibold text-navy/50 uppercase tracking-wider mb-1.5">
                                     Suggested Category
@@ -166,7 +189,6 @@ export default function AIAnalysisSection({
                                 </p>
                             </div>
 
-                            {/* Confidence */}
                             {analysis.confidence_score !== null && (
                                 <div className="mb-5">
                                     <div className="flex items-center justify-between mb-1.5">
@@ -191,7 +213,6 @@ export default function AIAnalysisSection({
                                 </div>
                             )}
 
-                            {/* Key evidence points */}
                             {keyPoints.length > 0 && (
                                 <div className="mb-5">
                                     <p className="flex items-center gap-1.5 text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
@@ -212,7 +233,6 @@ export default function AIAnalysisSection({
                                 </div>
                             )}
 
-                            {/* Draft complaint */}
                             <div className="mb-5">
                                 <p className="flex items-center gap-1.5 text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2">
                                     <FileText className="w-3.5 h-3.5" />
@@ -228,14 +248,23 @@ export default function AIAnalysisSection({
                                 </p>
                             </div>
 
-                            {/* Disclaimer */}
-                            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-50 border border-amber-200">
+                            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 mb-5">
                                 <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
                                 <p className="text-xs text-amber-800 leading-relaxed">
                                     This is an AI-generated suggestion, not legal advice.
                                     Please review carefully before filing.
                                 </p>
                             </div>
+
+                            <Button
+                                variant="primary"
+                                size="lg"
+                                className="w-full"
+                                onClick={handleExportPdf}
+                            >
+                                <Download className="w-4 h-4" />
+                                Export as PDF
+                            </Button>
                         </motion.div>
                     )}
                 </AnimatePresence>

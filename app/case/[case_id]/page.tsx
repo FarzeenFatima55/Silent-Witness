@@ -1,6 +1,6 @@
 "use client";
 
-import AIAnalysisSection from "./AIAnalysisSection";
+import { deleteCase } from "@/lib/actions/case";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,9 +19,11 @@ import {
   FileText,
   CalendarDays,
   Tag,
+  ScanText,
 } from "lucide-react";
 import Button from "@/app/components/ui/Button";
 import { uploadEvidence, listEvidence, getEvidenceSignedUrl, verifySession } from "@/lib/actions/evidence";
+import AIAnalysisSection from "./AIAnalysisSection";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -34,11 +36,12 @@ type EvidenceItem = {
   platform: string;
   evidence_type: string;
   captured_at: string | null;
+  message_text: string | null;
   created_at: string;
 };
 
 type Platform = "whatsapp" | "instagram" | "facebook" | "other";
-type UploadPhase = "idle" | "form" | "uploading" | "success" | "error";
+type UploadPhase = "form" | "ocr-running" | "uploading" | "success" | "error";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -96,10 +99,39 @@ function UploadModal({
   const [platform, setPlatform] = useState<Platform>("whatsapp");
   const [capturedAt, setCapturedAt] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [messageText, setMessageText] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedFile(e.target.files?.[0] ?? null);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setSelectedFile(file);
+    setMessageText("");
+
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    // Image preview
+    if (file.type.startsWith("image/")) {
+      setPreviewUrl(URL.createObjectURL(file));
+
+      // Run OCR
+      setPhase("ocr-running");
+      try {
+        const Tesseract = (await import("tesseract.js")).default;
+        const result = await Tesseract.recognize(file, "eng");
+        setMessageText(result.data.text.trim());
+      } catch (err) {
+        console.error("OCR error:", err);
+        // OCR failing shouldn't block upload — user can type manually
+      } finally {
+        setPhase("form");
+      }
+    } else {
+      setPreviewUrl(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -112,6 +144,7 @@ function UploadModal({
     fd.append("file", selectedFile);
     fd.append("platform", platform);
     if (capturedAt) fd.append("capturedAt", new Date(capturedAt).toISOString());
+    if (messageText.trim()) fd.append("messageText", messageText.trim());
 
     const result = await uploadEvidence(caseId, fd);
 
@@ -127,11 +160,10 @@ function UploadModal({
     }
   };
 
-  const isDisabled = phase === "uploading" || phase === "success";
+  const isDisabled = phase === "uploading" || phase === "success" || phase === "ocr-running";
 
   return (
     <>
-      {/* Backdrop */}
       <motion.div
         key="upload-backdrop"
         initial={{ opacity: 0 }}
@@ -141,23 +173,21 @@ function UploadModal({
         onClick={!isDisabled ? onClose : undefined}
       />
 
-      {/* Dialog */}
       <motion.div
         key="upload-dialog"
         initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 12 }}
         transition={{ type: "spring", stiffness: 350, damping: 28 }}
-        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+        className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
       >
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="upload-dialog-title"
-          className="w-full max-w-md bg-white rounded-2xl shadow-[0_20px_60px_rgb(27_42_74/0.16)] border border-navy/8 overflow-hidden"
+          className="w-full max-w-lg bg-white rounded-2xl shadow-[0_20px_60px_rgb(27_42_74/0.16)] border border-navy/8 overflow-hidden max-h-[90vh] flex flex-col"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-navy/6">
+          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-navy/6 shrink-0">
             <h3 id="upload-dialog-title" className="text-base font-bold text-navy">
               Upload Evidence
             </h3>
@@ -168,10 +198,8 @@ function UploadModal({
             )}
           </div>
 
-          {/* Body */}
-          <div className="p-6">
+          <div className="p-6 overflow-y-auto">
             <AnimatePresence mode="wait">
-              {/* SUCCESS */}
               {phase === "success" && (
                 <motion.div
                   key="upload-success"
@@ -186,7 +214,6 @@ function UploadModal({
                 </motion.div>
               )}
 
-              {/* FORM / UPLOADING / ERROR */}
               {phase !== "success" && (
                 <motion.form
                   key="upload-form"
@@ -196,7 +223,6 @@ function UploadModal({
                   exit={{ opacity: 0 }}
                   className="space-y-5"
                 >
-                  {/* Platform */}
                   <div>
                     <label htmlFor="platform-select" className="block text-sm font-medium text-navy mb-1.5">
                       <Tag className="inline w-3.5 h-3.5 mr-1 mb-0.5 text-sage" />
@@ -215,7 +241,6 @@ function UploadModal({
                     </select>
                   </div>
 
-                  {/* Date/time */}
                   <div>
                     <label htmlFor="captured-at" className="block text-sm font-medium text-navy mb-1.5">
                       <CalendarDays className="inline w-3.5 h-3.5 mr-1 mb-0.5 text-sage" />
@@ -232,7 +257,6 @@ function UploadModal({
                     />
                   </div>
 
-                  {/* File picker */}
                   <div>
                     <label className="block text-sm font-medium text-navy mb-1.5">
                       <Upload className="inline w-3.5 h-3.5 mr-1 mb-0.5 text-sage" />
@@ -270,7 +294,44 @@ function UploadModal({
                     />
                   </div>
 
-                  {/* Error */}
+                  {/* Image preview */}
+                  {previewUrl && (
+                    <div className="rounded-xl overflow-hidden border border-navy/10 bg-cream/40 max-h-56 flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={previewUrl} alt="Preview" className="max-h-56 object-contain" />
+                    </div>
+                  )}
+
+                  {/* OCR running indicator */}
+                  {phase === "ocr-running" && (
+                    <div className="flex items-center gap-2.5 text-sm text-slate/60">
+                      <Loader2 className="w-4 h-4 animate-spin text-sage" />
+                      Reading text from image...
+                    </div>
+                  )}
+
+                  {/* Extracted / editable message text */}
+                  {selectedFile && phase !== "ocr-running" && (
+                    <div>
+                      <label htmlFor="message-text" className="block text-sm font-medium text-navy mb-1.5">
+                        <ScanText className="inline w-3.5 h-3.5 mr-1 mb-0.5 text-sage" />
+                        Message content{" "}
+                        <span className="text-slate/50 font-normal">
+                          (auto-extracted — please review and correct)
+                        </span>
+                      </label>
+                      <textarea
+                        id="message-text"
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        disabled={isDisabled}
+                        rows={5}
+                        placeholder="No text detected. You can type or paste the message content here."
+                        className="w-full px-4 py-3 rounded-xl border border-navy/12 bg-cream/60 text-navy text-sm focus:outline-none focus:ring-2 focus:ring-sage/50 focus:border-sage transition-all disabled:opacity-50 resize-none"
+                      />
+                    </div>
+                  )}
+
                   <AnimatePresence>
                     {phase === "error" && (
                       <motion.div
@@ -285,7 +346,6 @@ function UploadModal({
                     )}
                   </AnimatePresence>
 
-                  {/* Submit */}
                   <Button
                     type="submit"
                     variant="primary"
@@ -368,6 +428,12 @@ function EvidenceRow({ item, caseId }: { item: EvidenceItem; caseId: string }) {
               <span className="text-xs text-slate/50">{formatDate(item.captured_at)}</span>
             </>
           )}
+          {item.message_text && (
+            <>
+              <span className="text-slate/25">·</span>
+              <span className="text-xs text-sage font-medium">Text extracted</span>
+            </>
+          )}
         </div>
       </div>
       <span className="text-xs text-slate/35 shrink-0">
@@ -392,8 +458,6 @@ export default function CaseDashboardPage() {
 
   const status: CaseStatus = "draft";
 
-  // Check session via server action (sw_session is httpOnly, so it's
-  // invisible to document.cookie — verification must happen server-side)
   useEffect(() => {
     verifySession(caseId).then((result) => {
       if (result.ok) {
@@ -404,11 +468,10 @@ export default function CaseDashboardPage() {
     });
   }, [caseId, router]);
 
-  // Load evidence once authed
   useEffect(() => {
     if (!authChecked) return;
     listEvidence(caseId).then((res) => {
-      if ("success" in res) setEvidence(res.items);
+      if ("success" in res) setEvidence(res.items as EvidenceItem[]);
       setLoadingEvidence(false);
     });
   }, [authChecked, caseId]);
@@ -431,14 +494,12 @@ export default function CaseDashboardPage() {
 
   return (
     <main className="min-h-screen bg-cream pb-24">
-      {/* Background */}
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-sage/5 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-navy/3 blur-3xl" />
       </div>
 
       <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28">
-        {/* HEADER */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -459,7 +520,6 @@ export default function CaseDashboardPage() {
           </div>
         </motion.div>
 
-        {/* EVIDENCE SECTION */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -502,8 +562,9 @@ export default function CaseDashboardPage() {
             )}
           </div>
         </motion.section>
-        <AIAnalysisSection caseId={caseId} evidenceCount={evidence.length} />
-        {/* UPLOAD BUTTON */}
+
+        <AIAnalysisSection caseId={caseId} evidenceCount={evidence.length} evidence={evidence} />
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -525,7 +586,6 @@ export default function CaseDashboardPage() {
           </p>
         </motion.div>
 
-        {/* DIVIDER */}
         <motion.hr
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -533,16 +593,12 @@ export default function CaseDashboardPage() {
           className="border-navy/8 mb-10"
         />
 
-        {/* DANGER ZONE */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.28, ease: "easeOut" }}
           aria-labelledby="danger-heading"
         >
-          <h2 id="danger-heading" className="text-sm font-semibold text-red-400/80 uppercase tracking-widest mb-3">
-            Danger Zone
-          </h2>
 
           <div className="bg-red-50/60 border border-red-200/70 rounded-2xl p-5">
             <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
@@ -553,11 +609,17 @@ export default function CaseDashboardPage() {
                 </p>
               </div>
               <Button
-                id="delete-case-btn"
-                variant="outline"
+                variant="primary"
                 size="md"
-                className="shrink-0 border-red-300 text-red-600 hover:bg-red-100 hover:border-red-400"
-                onClick={() => setShowDeleteConfirm(true)}
+                className="flex-1 bg-red-600 hover:bg-red-700 border-transparent shadow-[0_1px_3px_rgb(220_38_38/0.4)]"
+                onClick={async () => {
+                  const result = await deleteCase(caseId);
+                  if ("success" in result) {
+                    router.push("/");
+                  } else {
+                    setShowDeleteConfirm(false);
+                  }
+                }}
               >
                 <Trash2 className="w-4 h-4" />
                 Delete Case
@@ -567,7 +629,6 @@ export default function CaseDashboardPage() {
         </motion.section>
       </div>
 
-      {/* UPLOAD MODAL */}
       <AnimatePresence>
         {showUpload && (
           <UploadModal
@@ -578,7 +639,6 @@ export default function CaseDashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* DELETE CONFIRM MODAL */}
       <AnimatePresence>
         {showDeleteConfirm && (
           <>

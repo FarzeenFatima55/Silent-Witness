@@ -48,17 +48,18 @@ export async function uploadEvidence(
     formData: FormData
 ): Promise<
     | {
-          success: true
-          evidence: {
-              evidence_id: string
-              file_url: string
-              platform: string
-              evidence_type: string
-              captured_at: string | null
-              file_name: string
-              created_at: string
-          }
-      }
+        success: true
+        evidence: {
+            evidence_id: string
+            file_url: string
+            platform: string
+            evidence_type: string
+            message_text: string | null
+            captured_at: string | null
+            file_name: string
+            created_at: string
+        }
+    }
     | { error: string }
 > {
     // 1. Verify session
@@ -69,6 +70,7 @@ export async function uploadEvidence(
     const file = formData.get('file') as File | null
     const platform = (formData.get('platform') as Platform) ?? 'other'
     const capturedAt = formData.get('capturedAt') as string | null
+    const messageText = formData.get('messageText') as string | null
 
     if (!file || file.size === 0) return { error: 'No file provided.' }
     if (!ALLOWED_MIME_TYPES.has(file.type)) {
@@ -112,8 +114,9 @@ export async function uploadEvidence(
             platform,
             evidence_type: evidenceType,
             captured_at: capturedAt || null,
+            message_text: messageText || null,
         })
-        .select('evidence_id, file_url, platform, evidence_type, captured_at, file_name, created_at')
+        .select('evidence_id, file_url, platform, evidence_type, captured_at, file_name, message_text, created_at')
         .single()
 
     if (insertError || !row) {
@@ -130,17 +133,17 @@ export async function listEvidence(
     caseId: string
 ): Promise<
     | {
-          success: true
-          items: {
-              evidence_id: string
-              file_url: string
-              platform: string
-              evidence_type: string
-              captured_at: string | null
-              file_name: string
-              created_at: string
-          }[]
-      }
+        success: true
+        items: {
+            evidence_id: string
+            file_url: string
+            platform: string
+            evidence_type: string
+            captured_at: string | null
+            file_name: string
+            created_at: string
+        }[]
+    }
     | { error: string }
 > {
     const session = await verifySession(caseId)

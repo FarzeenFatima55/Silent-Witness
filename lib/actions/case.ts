@@ -19,6 +19,8 @@ export async function createCase(pin?: string) {
 
     const caseCode = codeData as string
 
+
+
     // 2. Hash PIN if provided (using pgcrypto via SQL, not JS)
     let pinHash: string | null = null
     if (pin) {
@@ -96,4 +98,60 @@ export async function retrieveCase(caseCode: string, pin?: string) {
     })
 
     return { success: true, case_id: result.case_id }
+}
+// ---------- GET CASE CODE (for display purposes, e.g. PDF export) ----------
+export async function getCaseCode(caseId: string): Promise<{ case_code: string } | { error: string }> {
+    const { data, error } = await supabaseAdmin
+        .from('cases')
+        .select('case_code')
+        .eq('case_id', caseId)
+        .single()
+
+    if (error || !data) {
+        return { error: 'Could not fetch case code.' }
+    }
+
+    return { case_code: data.case_code }
+}
+// ---------- DELETE CASE (permanently removes case, evidence, and storage files) ----------
+export async function deleteCase(caseId: string): Promise<{ success: true } | { error: string }> {
+    // 1. Verify session belongs to this case
+    const cookieStore = await cookies()
+    const token = cookieStore.get('sw_session')?.value
+
+    if (!token) return { error: 'No session found.' }
+
+    try {
+        const payload = jwt.verify(token, JWT_SECRET) as { case_id: string }
+        if (payload.case_id !== caseId) {
+            return { error: 'Session does not match this case.' }
+        }
+    } catch {
+        return { error: 'Session expired or invalid.' }
+    }
+
+    // 2. List and delete all storage files for this case
+    const { data: files } = await supabaseAdmin.storage
+        .from('evidence')
+        .list(caseId)
+
+    if (files && files.length > 0) {
+        const paths = files.map((f) => `${caseId}/${f.name}`)
+        await supabaseAdmin.storage.from('evidence').remove(paths)
+    }
+
+    // 3. Delete the case row (evidence + ai_analysis rows cascade-delete via foreign keys)
+    const { error: deleteError } = await supabaseAdmin
+        .from('cases')
+        .delete()
+        .eq('case_id', caseId)
+
+    if (deleteError) {
+        return { error: 'Could not delete case. Please try again.' }
+    }
+
+    // 4. Clear the session cookie
+    cookieStore.delete('sw_session')
+
+    return { success: true }
 }
